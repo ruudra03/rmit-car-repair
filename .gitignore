@@ -1,0 +1,6 @@
+# Ignore PDF and Text files
+*.pdf
+*.txt
+
+# Ignore Python environment directory
+/env
