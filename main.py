@@ -1,74 +1,151 @@
-# Customers and their membership status
-# Initialise with two customers
-customers_data = dict(tim=True, rose=False)
+# All existing customers and their membership status
+customers_data = dict({"Tim": True, "Rose": False})
 
-# Services offered and their presets of service hours and parts requirement
+# Services offered in the shop and their presets of service hours and parts requirement
 shop_services = dict(
-    inspection=tuple([1.0, False]),
-    diagnostic=tuple([1.0, False]),
-    maintenance=tuple([2.0, True]),
+    inspection=tuple([1, False]),
+    diagnostic=tuple([1, False]),
+    maintenance=tuple([2, True]),
     repair=tuple([None, True]),
 )
 
-# Parts available and their prices (A$)
+# Parts available in the shop for services and their prices in A$
 parts_catalog = dict(
-    oil=35.0,
-    filter=25.0,
-    brake=120.0,
-    battery=180.0,
-    radiator=420.0,
-    motor=280.0,
+    oil=35,
+    filter=25,
+    brake=120,
+    battery=180,
+    radiator=420,
+    motor=280,
 )
 
 
-# Function to initialise a new service for a customer and print a receipt
+# Process a new service for a customer and then print a receipt in the end
 def perform_a_service():
-    # Get the name of the customer who came in for service
-    customer_name = input("Enter the customer's name:\n")
+    # Get customer information who came in for service
+    customer = get_customer()
+
+    # Get service requested by the customer
+    service_details = get_service_details()
+
+    # Calculate service costs
+    service_costs = get_service_costs(service_details, customer["is_member"])
+
+    # Print a receipt for the service
+    receipt_printer(service_details, service_costs)
+
+
+# Return a valid customer name and their membership status
+def get_customer():
+    # Loop until a valid name is entered
+    while True:
+        name = input("Enter the name of the customer:\n")
+
+        # If the name string has non-alphabetic characters or empty print an error message and then loop back
+        for string in name.split():
+            if not string.isalpha():
+                print(
+                    "The customer name is invalid. The name value contains non-alphabetic characters or is empty."
+                )
+                continue
+
+        # Break when valid name is entered
+        break
 
     # Lookup the customer name and then get their membership status
-    if customer_name in customers_data:
-        is_member = customers_data[customer_name]
+    if name in customers_data:
+        is_member = customers_data[name]
     else:
         # Set membership flag to False for a new customer
         is_member = False
 
-    # Get service requested by the customer
-    service_req = input("Choose the type of service requested by the customer:\n")
+    return dict(name=name, is_member=is_member)
 
-    # Get hours required to finish the service and check whether the requested service requires any parts
-    service_hours = shop_services[service_req][0]
-    is_part_required = shop_services[service_req][1]
 
-    # Get service hours if preset value is None
-    if not service_hours:
-        service_hours = float(
-            input(f"How many hours do you need for the {service_req}?\n")
-        )
+# Return a valid service request details including hours, parts, and costs
+def get_service_details():
+    # Loop until a vaild service is requested
+    while True:
+        service = input("Enter the service requested by the customer:\n")
 
-    # Get list of all parts needed for the service if necessary
-    parts_list = list()
+        # If the service requested string is non-alphabetic or empty print an error message and then loop back
+        if not service.isalpha():
+            print(
+                "The requested service is invalid. The service request cannot contain non-alphabetic characters or be empty."
+            )
+            continue
+        # If the service is not offered by the shop print an error message and loop back
+        elif service not in shop_services:
+            print(
+                "The requested service is invalid. The service requested is not offered at the shop."
+            )
+            continue
 
-    while is_part_required:
-        part = input(
-            f"Which part do you want to use for the {service_req}? (Press enter to skip)\n"
-        )
+        # Break when valid service is requested
+        break
 
-        # Check if part name is entered
-        if part:
-            parts_list.append(part)
-        else:
+    # Select the service preset
+    service_preset = shop_services[service]
+
+    # Get valid service hours if preset value is None
+    if not service_preset[0]:
+        while True:
+            hours = input("Enter the number of hours required for the service:\n")
+
+            # If the hours string is non-numeric or empty print an error message and then loop back
+            for digits in hours.split("."):
+                if not digits.isnumeric():
+                    print(
+                        "The hours entered for the service is invalid. The hours value cannot contain non-numeric characters or be empty."
+                    )
+                    continue
+
+            # If hours string is not no a multiple of 0.5 print an error message and then loop back
+            if float(hours) % 0.5 != 0:
+                print(
+                    "The hours entered for the service is invalid. The hours value should be in multiple of 0.5."
+                )
+                continue
+
+            # Break when valid hours are entered
             break
+    else:
+        # Use default value if present
+        hours = service_preset[0]
 
-    # Calculate service costs and form its data
-    service_data = set_service_data(service_req, service_hours, parts_list, is_member)
+    # Get list of valid parts with their prices if they are required for the service
+    parts = list()
+    if service_preset[1]:
+        while True:
+            part = input(
+                "Enter the part needed for the service [press enter to skip]:\n"
+            )
 
-    # Print a receipt for the service
-    receipt_printer(service_data)
+            # Stop if no input is entered
+            if not part:
+                break
+            # If the part name string is non-alphabetic print an error message and then loop back
+            elif not part.isalpha():
+                print(
+                    "The part is invalid. The part name cannot contain non-alphabetic characters."
+                )
+                continue
+            # If the part is not the catalog print an error message and loop back
+            elif part not in parts_catalog:
+                print(
+                    "The part is invalid. The part entered does not exist in the catalog."
+                )
+                continue
+
+            # Store part and its price
+            parts.append(tuple([part, parts_catalog[part]]))
+
+    # Return service details
+    return dict(service=service, hours=hours, parts=parts)
 
 
 # Function that returns service hours, list of parts used and their prices, original cost, discount amount, and total cost
-def set_service_data(service_req, service_hours, parts_list, is_member):
+def get_service_costs(service_details, is_member):
     # Hourly rate (A$) of all services
     SERVICE_COST = 40.0
 
@@ -76,16 +153,13 @@ def set_service_data(service_req, service_hours, parts_list, is_member):
     MEMBERSHIP_DISCOUNT = 10
 
     # Calculate service charge based on hours spent
-    service_charge = service_hours * SERVICE_COST
+    service_charge = float(service_details["hours"]) * SERVICE_COST
 
-    # Calculate the charge of parts used and record their individual prices
-    service_parts = set()
+    # Calculate the charge of parts used
     parts_charge = 0.0
 
-    for part in parts_list:
-        part_price = parts_catalog[part]
-
-        service_parts.add(tuple([part, part_price]))
+    for part in service_details["parts"]:
+        part_price = part[1]
         parts_charge += part_price
 
     # Calculate original cost of the service based on hours and parts expended
@@ -102,9 +176,6 @@ def set_service_data(service_req, service_hours, parts_list, is_member):
 
     # Return data required for the receipt printer
     return dict(
-        service=service_req,
-        hours=service_hours,
-        parts=service_parts,
         original_cost=original_cost,
         discount_amt=discount_amt,
         total_cost=total_cost,
@@ -112,52 +183,54 @@ def set_service_data(service_req, service_hours, parts_list, is_member):
     )
 
 
-# Prints a receipt for a service using its type, hours, and parts if necessary
-def receipt_printer(service_data):
+# Print a receipt for a service using its details and costs
+def receipt_printer(service_details, service_costs):
     # Start printing the receipt with its header
-    printer_line(is_header=True)
+    print_receipt_line(is_header=True)
 
     # Print service charge
-    printer_line(
+    print_receipt_line(
         is_body=True,
-        left_string=service_data["service"],
-        right_string=service_data["hours"],
-        end_string=f" x {service_data['hourly_service_cost']}",
+        left_string=service_details["service"],
+        right_string=service_details["hours"],
+        end_string=f" x {service_costs['hourly_service_cost']:.2f}",
     )
 
     # Print part charge
-    for part in service_data["parts"]:
-        printer_line(is_body=True, left_string=part[0], right_string=part[1])
+    for part in service_details["parts"]:
+        print_receipt_line(
+            is_body=True, left_string=part[0], right_string=f"{part[1]:.2f}"
+        )
 
     # Add section break
-    printer_line(is_section=True)
+    print_receipt_line(is_section=True)
 
     # Print original cost, discount amount, and total cost
-    printer_line(
+    print_receipt_line(
         is_body=True,
         left_string="Original cost",
-        right_string=service_data["original_cost"],
+        right_string=f"{service_costs['original_cost']:.2f}",
         end_string=" (AUD)",
     )
-    printer_line(
+    print_receipt_line(
         is_body=True,
         left_string="Discount",
-        right_string=service_data["discount_amt"],
+        right_string=f"{service_costs['discount_amt']:.2f}",
         end_string=" (AUD)",
     )
-    printer_line(
+    print_receipt_line(
         is_body=True,
         left_string="Total cost",
-        right_string=service_data["total_cost"],
+        right_string=f"{service_costs['total_cost']:.2f}",
         end_string=" (AUD)",
     )
 
     # End printing receipt with section break
-    printer_line(is_section=True)
+    print_receipt_line(is_section=True)
 
 
 # Helper function to handle text alignment of the formatted receipt
-def printer_line(
+def print_receipt_line(
     is_header=False,
     is_section=False,
     is_body=False,
@@ -168,18 +241,18 @@ def printer_line(
     # Receipt paper width or characters space
     RECEIPT_WIDTH = 75
 
-    # Section seperator
-    section_seperator_str = "-" * RECEIPT_WIDTH
+    # Section separator
+    section_separator_str = "-" * RECEIPT_WIDTH
 
     # Check if section break is called
     if is_section:
-        # Use section seperator
-        formatted_string = section_seperator_str
+        # Use section separator
+        formatted_string = section_separator_str
 
     # Check if the text is to be aligned at center
     # Only use right side string
     if is_header:
-        formatted_string = f"{section_seperator_str}\n{'Receipt':^{RECEIPT_WIDTH}}\n{section_seperator_str}"
+        formatted_string = f"{section_separator_str}\n{'Receipt':^{RECEIPT_WIDTH}}\n{section_separator_str}"
 
     # Use left, right, and suffix strings if the text is body
     if is_body:

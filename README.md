@@ -24,16 +24,16 @@ _The program should:_
 
 #### Features
 
-- [x] **Job Creation/Perform a Service** – Mechanics and receptionists can create a new service job by entering a customer name and their requested service with specific hours and parts when necessary.
-- [x] **Customer Receipts** – Calculate the total cost of a job for the customer using prices from the presets for services and parts. Apply discounts for member customers. Print a receipt for the customer for the specific service job.
-- [] **Input Validation** – Handle user input validation at all stages.
-- [] **Program Menu** – Print a formatted menu and provide options to operate the software.
-- [] **Update Services and Parts Presets** – Modify the default value of services' hour preset (either a new default value or allow user input for specific hours). Add new parts to the preset, and remove and update the existing parts data.
-- [] **Display Stored Data** – Print existing customers list (including their membership status), and services and parts presets.
+[x] **Job Creation/Perform a Service** – Mechanics and receptionists can create a new service job by entering a customer name and their requested service with specific hours and parts when necessary.
+[x] **Customer Receipts** – Calculate the total cost of a job for the customer using prices from the presets for services and parts. Apply discounts for member customers. Print a receipt for the customer for the specific service job.
+[x] **Input Validation** – Handle user input validation at all stages.
+[] **Program Menu** – Print a formatted menu and provide options to operate the software.
+[] **Update Services and Parts Presets** – Modify the default value of services' hour preset (either a new default value or allow user input for specific hours). Add new parts to the preset, and remove and update the existing parts data.
+[] **Display Stored Data** – Print existing customers list (including their membership status), and services and parts presets.
 
 ---
 
-**Copyright © 2026 Rudra Patel. All rights reserved.**
-
 > [!WARNING]
 > This program is developed for the sole purpose of completing a university assignment and is strictly **read-only**. Unauthorized use, modification, or distribution is prohibited.
+
+**© 2026 Rudra Patel. All rights reserved.**
