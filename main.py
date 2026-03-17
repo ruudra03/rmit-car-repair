@@ -3,10 +3,10 @@ customers_data = dict({"Tim": True, "Rose": False})
 
 # Services offered in the shop and their presets of service hours and parts requirement
 shop_services = dict(
-    inspection=tuple([1, False]),
-    diagnostic=tuple([1, False]),
-    maintenance=tuple([2, True]),
-    repair=tuple([None, True]),
+    inspection=(1, False),
+    diagnostic=(1, False),
+    maintenance=(2, True),
+    repair=(None, True),
 )
 
 # Parts available in the shop for services and their prices in A$
@@ -38,19 +38,16 @@ def perform_a_service():
 # Return a valid customer name and their membership status
 def get_customer():
     # Loop until a valid name is entered
-    while True:
+    is_name_valid = False
+    while not is_name_valid:
         name = input("Enter the name of the customer:\n")
 
-        # If the name string has non-alphabetic characters or empty print an error message and then loop back
-        for string in name.split():
-            if not string.isalpha():
-                print(
-                    "The customer name is invalid. The name value contains non-alphabetic characters or is empty."
-                )
-                continue
-
-        # Break when valid name is entered
-        break
+        # If the name string has non-alphabetic characters or empty print an error message
+        is_name_valid = validate_user_input(name, check_name=True)
+        if not is_name_valid:
+            print(
+                "The customer name is invalid. The name value should be non-empty and contain alphabetic characters."
+            )
 
     # Lookup the customer name and then get their membership status
     if name in customers_data:
@@ -65,50 +62,32 @@ def get_customer():
 # Return a valid service request details including hours, parts, and costs
 def get_service_details():
     # Loop until a vaild service is requested
-    while True:
+    is_service_valid = False
+    while not is_service_valid:
         service = input("Enter the service requested by the customer:\n")
 
-        # If the service requested string is non-alphabetic or empty print an error message and then loop back
-        if not service.isalpha():
+        # If the service requested string is not offered by the shop or empty print an error message
+        is_service_valid = validate_user_input(service, check_service=True)
+        if not is_service_valid:
             print(
-                "The requested service is invalid. The service request cannot contain non-alphabetic characters or be empty."
+                "The service requested is invalid. The service value should be non-empty and offered by the shop."
             )
-            continue
-        # If the service is not offered by the shop print an error message and loop back
-        elif service not in shop_services:
-            print(
-                "The requested service is invalid. The service requested is not offered at the shop."
-            )
-            continue
-
-        # Break when valid service is requested
-        break
 
     # Select the service preset
     service_preset = shop_services[service]
 
     # Get valid service hours if preset value is None
-    if not service_preset[0]:
-        while True:
+    if service_preset[0] is None:
+        is_hours_valid = False
+        while not is_hours_valid:
             hours = input("Enter the number of hours required for the service:\n")
 
-            # If the hours string is non-numeric or empty print an error message and then loop back
-            for digits in hours.split("."):
-                if not digits.isnumeric():
-                    print(
-                        "The hours entered for the service is invalid. The hours value cannot contain non-numeric characters or be empty."
-                    )
-                    continue
-
-            # If hours string is not no a multiple of 0.5 print an error message and then loop back
-            if float(hours) % 0.5 != 0:
+            # If the hours string is non-numeric, zero, not a multiple of 0.5, or empty print an error message
+            is_hours_valid = validate_user_input(hours, check_hours=True)
+            if not is_hours_valid:
                 print(
-                    "The hours entered for the service is invalid. The hours value should be in multiple of 0.5."
+                    "The service hours entered is invalid. The hours value should be numeric, non-empty, non-zero, and a multiple of 0.5."
                 )
-                continue
-
-            # Break when valid hours are entered
-            break
     else:
         # Use default value if present
         hours = service_preset[0]
@@ -116,29 +95,28 @@ def get_service_details():
     # Get list of valid parts with their prices if they are required for the service
     parts = list()
     if service_preset[1]:
-        while True:
+        is_part_valid = False
+        while not is_part_valid:
             part = input(
                 "Enter the part needed for the service [press enter to skip]:\n"
             )
 
-            # Stop if no input is entered
+            # If the input string is empty break out of the loop
             if not part:
                 break
-            # If the part name string is non-alphabetic print an error message and then loop back
-            elif not part.isalpha():
-                print(
-                    "The part is invalid. The part name cannot contain non-alphabetic characters."
-                )
-                continue
-            # If the part is not the catalog print an error message and loop back
-            elif part not in parts_catalog:
-                print(
-                    "The part is invalid. The part entered does not exist in the catalog."
-                )
-                continue
 
-            # Store part and its price
-            parts.append(tuple([part, parts_catalog[part]]))
+            # If the part name is not in the catalog print an error message
+            is_part_valid = validate_user_input(part, check_part=True)
+            if not is_part_valid:
+                print(
+                    "The part is invalid. The part entered should exist in the catalog."
+                )
+            else:
+                # Store part and its price
+                parts.append((part, parts_catalog[part]))
+
+                # Continue looping until skipped
+                is_part_valid = False
 
     # Return service details
     return dict(service=service, hours=hours, parts=parts)
@@ -264,6 +242,56 @@ def print_receipt_line(
         )
 
     print(formatted_string)
+
+
+# Validate string content of user inputs
+def validate_user_input(
+    user_input,
+    check_name=False,
+    check_service=False,
+    check_hours=False,
+    check_part=False,
+):
+    # Return False if string is empty
+    if not user_input:
+        return False
+
+    # Check if customer name is valid
+    if check_name:
+        # Get all separate strings from the name input
+        strings = user_input.split()
+
+        # If not all words are alphabetic return false
+        for string in strings:
+            if not string.isalpha():
+                return False
+
+    # Check if service request is valid
+    if check_service:
+        # If the service is not offered at the shop return False
+        if user_input not in shop_services:
+            return False
+
+    # Check if service hours input is valid
+    if check_hours:
+        # If hours is not float return False
+        try:
+            user_input_float = float(input)
+        except ValueError:
+            return False
+
+        # If the value of hours entered is 0 or not a multiple of 0.5 return False
+        if (user_input_float == 0) or (user_input_float % 0.5 != 0):
+            return False
+
+    # Check if part name is valid
+    if check_part:
+        # If the part is not present in the catalog return False
+        if input not in parts_catalog:
+            return False
+
+    # If the input passes the check return True
+    return True
 
 
 perform_a_service()
