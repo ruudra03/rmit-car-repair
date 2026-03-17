@@ -1,23 +1,103 @@
 # All existing customers and their membership status
-customers_data = dict({"Tim": True, "Rose": False})
+customers_data = {"Tim": True, "Rose": False}
 
 # Services offered in the shop and their presets of service hours and parts requirement
-shop_services = dict(
-    inspection=(1, False),
-    diagnostic=(1, False),
-    maintenance=(2, True),
-    repair=(None, True),
-)
+shop_services = {
+    "inspection": (1, False),
+    "diagnostic": (1, False),
+    "maintenance": (2, True),
+    "repair": (None, True),
+}
 
 # Parts available in the shop for services and their prices in A$
-parts_catalog = dict(
-    oil=35,
-    filter=25,
-    brake=120,
-    battery=180,
-    radiator=420,
-    motor=280,
-)
+parts_catalog = {
+    "oil": 35,
+    "filter": 25,
+    "brake": 120,
+    "battery": 180,
+    "radiator": 420,
+    "motor": 280,
+}
+
+
+# Function that initiates the program
+def start_program():
+    # Print welcome message
+    print("RMIT Car Repair Shop\n")
+
+    # Keep running the program using a menu
+    try:
+        program_menu()
+        # End the program once the function ends
+        print("\nThe program has ended!")
+    except EOFError:
+        print("\nERROR! Program was ended abruptly.")
+
+
+# Handle program options/features using menu
+def program_menu():
+    # Menu options available
+    program_options = {
+        1: ("Perform a service", perform_a_service),
+        2: ("Update services", update_service_preset),
+        3: ("Update parts", update_parts_catalog),
+        4: ("Display existing customers", display_customers_data),
+        5: ("Display existing services", display_shop_services),
+        6: ("Display existing parts", display_parts_catalog),
+    }
+
+    # Handle relevant program feature based on user input
+    is_program_running = True
+    while is_program_running:
+        print_program_menu(program_options)
+
+        # Get option choice from user
+        is_option_valid = False
+        while not is_option_valid:
+            choice = input("Enter an option: ")
+
+            # Check if valid option is choosen
+            try:
+                choice_int = int(choice)
+
+                # Quit the menu if 0 is entered
+                if choice_int == 0:
+                    is_option_valid = True
+                    is_program_running = False
+                    break
+
+                # Get the option user choosed for and then call the associated function
+                # Rerun the menu after the function is finished running
+                for option_num, option in program_options.items():
+                    if choice_int == option_num:
+                        # Insert new line
+                        print()
+                        option[1]()
+                        is_option_valid = True
+                        break
+            except ValueError:
+                print("ERROR! Choose a valid option value from the menu.")
+                continue
+
+
+# Print program menu
+def print_program_menu(program_options):
+    # Menu separator string
+    MENU_WIDTH = 75
+    menu_separator_str = "#" * MENU_WIDTH
+
+    # Print the menu with all the program options
+    # Start the menu
+    print(menu_separator_str)
+    print("Program Menu")
+
+    # Print program options
+    for option_num, option in program_options.items():
+        print(f"{option_num}: {option[0]}")
+
+    # Add an option to quit the program and then end the menu
+    print("[Enter '0' to exit the program]")
+    print(menu_separator_str)
 
 
 # Process a new service for a customer and then print a receipt in the end
@@ -43,11 +123,9 @@ def get_customer():
         name = input("Enter the name of the customer:\n")
 
         # If the name string has non-alphabetic characters or empty print an error message
-        is_name_valid = validate_user_input(name, check_name=True)
+        is_name_valid = validate_name_input(name)
         if not is_name_valid:
-            print(
-                "The customer name is invalid. The name value should be non-empty and contain alphabetic characters."
-            )
+            print("ERROR! The customer's name should be non-empty and alphabetic.")
 
     # Lookup the customer name and then get their membership status
     if name in customers_data:
@@ -56,7 +134,7 @@ def get_customer():
         # Set membership flag to False for a new customer
         is_member = False
 
-    return dict(name=name, is_member=is_member)
+    return {"name": name, "is_member": is_member}
 
 
 # Return a valid service request details including hours, parts, and costs
@@ -67,10 +145,10 @@ def get_service_details():
         service = input("Enter the service requested by the customer:\n")
 
         # If the service requested string is not offered by the shop or empty print an error message
-        is_service_valid = validate_user_input(service, check_service=True)
+        is_service_valid = validate_service_input(service)
         if not is_service_valid:
             print(
-                "The service requested is invalid. The service value should be non-empty and offered by the shop."
+                "ERROR! The service request should be non-empty and available at the shop."
             )
 
     # Select the service preset
@@ -83,22 +161,22 @@ def get_service_details():
             hours = input("Enter the number of hours required for the service:\n")
 
             # If the hours string is non-numeric, zero, not a multiple of 0.5, or empty print an error message
-            is_hours_valid = validate_user_input(hours, check_hours=True)
+            is_hours_valid = validate_hours_input(hours)
             if not is_hours_valid:
                 print(
-                    "The service hours entered is invalid. The hours value should be numeric, non-empty, non-zero, and a multiple of 0.5."
+                    "ERROR! The hours should be non-zero, numeric, and a multiple of 0.5."
                 )
     else:
         # Use default value if present
         hours = service_preset[0]
 
     # Get list of valid parts with their prices if they are required for the service
-    parts = list()
+    parts = []
     if service_preset[1]:
         is_part_valid = False
         while not is_part_valid:
             part = input(
-                "Enter the part needed for the service [press enter to skip]:\n"
+                "Enter the part needed for the service [Press enter to skip]:\n"
             )
 
             # If the input string is empty break out of the loop
@@ -106,11 +184,9 @@ def get_service_details():
                 break
 
             # If the part name is not in the catalog print an error message
-            is_part_valid = validate_user_input(part, check_part=True)
+            is_part_valid = validate_part_input(part)
             if not is_part_valid:
-                print(
-                    "The part is invalid. The part entered should exist in the catalog."
-                )
+                print("ERROR! The part entered should exist in the catalog.")
             else:
                 # Store part and its price
                 parts.append((part, parts_catalog[part]))
@@ -119,7 +195,7 @@ def get_service_details():
                 is_part_valid = False
 
     # Return service details
-    return dict(service=service, hours=hours, parts=parts)
+    return {"service": service, "hours": hours, "parts": parts}
 
 
 # Function that returns service hours, list of parts used and their prices, original cost, discount amount, and total cost
@@ -153,12 +229,12 @@ def get_service_costs(service_details, is_member):
     total_cost = original_cost - discount_amt
 
     # Return data required for the receipt printer
-    return dict(
-        original_cost=original_cost,
-        discount_amt=discount_amt,
-        total_cost=total_cost,
-        hourly_service_cost=SERVICE_COST,
-    )
+    return {
+        "original_cost": original_cost,
+        "discount_amt": discount_amt,
+        "total_cost": total_cost,
+        "hourly_service_cost": SERVICE_COST,
+    }
 
 
 # Print a receipt for a service using its details and costs
@@ -203,8 +279,9 @@ def receipt_printer(service_details, service_costs):
         end_string=" (AUD)",
     )
 
-    # End printing receipt with section break
+    # End printing receipt with section break and a new line
     print_receipt_line(is_section=True)
+    print()
 
 
 # Helper function to handle text alignment of the formatted receipt
@@ -217,7 +294,7 @@ def print_receipt_line(
     end_string="",
 ):
     # Receipt paper width or characters space
-    RECEIPT_WIDTH = 75
+    RECEIPT_WIDTH = 60
 
     # Section separator
     section_separator_str = "-" * RECEIPT_WIDTH
@@ -244,54 +321,96 @@ def print_receipt_line(
     print(formatted_string)
 
 
-# Validate string content of user inputs
-def validate_user_input(
-    user_input,
-    check_name=False,
-    check_service=False,
-    check_hours=False,
-    check_part=False,
-):
+# Update service's hours preset
+def update_service_preset():
+    print("TODO")
+
+
+# Update parts in the catalog
+def update_parts_catalog():
+    print("TODO")
+
+
+# Display all the existing customers data
+def display_customers_data():
+    print("TODO")
+
+
+# Display all the services offered at the shop
+def display_shop_services():
+    print("TODO")
+
+
+# Display all the parts in the catalog
+def display_parts_catalog():
+    print("TODO")
+
+
+# Validate customer name input
+def validate_name_input(user_input):
     # Return False if string is empty
     if not user_input:
         return False
 
-    # Check if customer name is valid
-    if check_name:
-        # Get all separate strings from the name input
-        strings = user_input.split()
+    # Get all separate strings from the name input
+    strings = user_input.split()
 
-        # If not all words are alphabetic return false
-        for string in strings:
-            if not string.isalpha():
-                return False
-
-    # Check if service request is valid
-    if check_service:
-        # If the service is not offered at the shop return False
-        if user_input not in shop_services:
-            return False
-
-    # Check if service hours input is valid
-    if check_hours:
-        # If hours is not float return False
-        try:
-            user_input_float = float(input)
-        except ValueError:
-            return False
-
-        # If the value of hours entered is 0 or not a multiple of 0.5 return False
-        if (user_input_float == 0) or (user_input_float % 0.5 != 0):
-            return False
-
-    # Check if part name is valid
-    if check_part:
-        # If the part is not present in the catalog return False
-        if input not in parts_catalog:
+    # If not all words are alphabetic return false
+    for string in strings:
+        if not string.isalpha():
             return False
 
     # If the input passes the check return True
     return True
 
 
-perform_a_service()
+# Validate service request input
+def validate_service_input(user_input):
+    # Return False if string is empty
+    if not user_input:
+        return False
+
+    # If the service is not offered at the shop return False
+    if user_input not in shop_services:
+        return False
+
+    # If the input passes the check return True
+    return True
+
+
+# Validate service hours input
+def validate_hours_input(user_input):
+    # Return False if string is empty
+    if not user_input:
+        return False
+
+    # If hours is not float return False
+    try:
+        user_input_float = float(user_input)
+    except ValueError:
+        return False
+
+    # If the value of hours entered is 0 or not a multiple of 0.5 return False
+    if (user_input_float == 0) or (user_input_float % 0.5 != 0):
+        return False
+
+    # If the input passes the check return True
+    return True
+
+
+# Validate service part name input
+def validate_part_input(user_input):
+    # Return False if string is empty
+    if not user_input:
+        return False
+
+    # If the part is not present in the catalog return False
+    if user_input not in parts_catalog:
+        return False
+
+    # If the input passes the check return True
+    return True
+
+
+# Start the program
+start_program()
