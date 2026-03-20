@@ -29,7 +29,7 @@ _The program should:_
 - [x] **Input Validation** – Handle user input validation at all stages.
 - [x] **Program Menu** – Print a formatted menu and provide options to operate the software.
 - [] **Update Services and Parts Presets** – Modify the default value of services' hour preset (either a new default value or allow user input for specific hours). Add new parts to the preset, and remove and update the existing parts data.
-- [] **Display Stored Data** – Print existing customers list (including their membership status), and services and parts presets.
+- [x] **Display Stored Data** – Print existing customers list (including their membership status), and services and parts presets.
 
 ---
 
