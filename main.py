@@ -3,10 +3,10 @@ customers = {"tim": True, "rose": False}
 
 # Services offered in the shop and their presets of service hours and parts requirement
 services = {
-    "inspection": {"service_hours": 1, "is_part_required": False},
-    "diagnostic": {"service_hours": 1, "is_part_required": False},
-    "maintenance": {"service_hours": 2, "is_part_required": True},
-    "repair": {"service_hours": None, "is_part_required": True},
+    "inspection": {"hours": 1.0, "is_part_required": False},
+    "diagnostic": {"hours": 1.0, "is_part_required": False},
+    "maintenance": {"hours": 2.0, "is_part_required": True},
+    "repair": {"hours": None, "is_part_required": True},
 }
 
 # Parts available in the shop for services and their prices in A$
@@ -19,7 +19,7 @@ parts = {
     "motor": 280.0,
 }
 
-# Set program display width
+# Set display width
 DISPLAY_WIDTH = 70
 
 # Set separator charcters
@@ -54,8 +54,8 @@ def run_menu():
     # Menu options available
     options = {
         1: ("Perform a service", perform_a_service),
-        2: ("Update services", update_service_preset),
-        3: ("Update parts", update_parts_catalog),
+        2: ("Update services", update_services),
+        3: ("Update parts", update_parts),
         4: ("Display existing customers", display_existing_customers),
         5: ("Display existing services", display_existing_services),
         6: ("Display existing parts", display_existing_parts),
@@ -71,7 +71,7 @@ def run_menu():
             try:
                 choice = int(input("Enter an option: ").strip())
             except ValueError:
-                print("\nInvalid option! Enter numeric characters only.")
+                print("\nInvalid option. Enter numeric characters only.")
                 continue
 
             # Quit the menu if 0 is entered
@@ -84,11 +84,12 @@ def run_menu():
                 options[choice][1]()
                 break
             else:
-                print("\nInvalid option! Enter a valid option from the menu.")
+                print("\nInvalid option. Enter a valid option from the menu.")
 
 
 # Print program menu
 def display_menu(options):
+
     # Print the menu with all the program options
     # Start the menu
     print("\n" + MENU_SECTION_CHAR * DISPLAY_WIDTH)
@@ -117,6 +118,12 @@ def perform_a_service():
     # Print a receipt for the service
     display_receipt(service, costs)
 
+    # Check for existing customers
+    if customer["has_record"] and not customer["is_member"]:
+        update_membership(customer["name"])
+    elif not customer["has_record"]:
+        add_customer(customer["name"])
+
 
 # Return a valid customer name and their membership status
 def get_customer_details():
@@ -127,19 +134,19 @@ def get_customer_details():
 
         # If name is empty print an error message and loop back
         if not name:
-            print("\nInvalid name! Enter a valid name.")
+            print("\nInvalid name. Enter a valid name.")
             continue
 
         # If not all words are alphabetic print an error message and loop back
         if not all(word.isalpha() for word in name.split()):
-            print("\nInvalid name! Enter alphabetic characters only.")
+            print("\nInvalid name. Enter alphabetic characters only.")
             continue
 
         # Break if a valid name is entered
         break
 
     # Lookup the customer name and then get their membership status
-    if customers.get(name):
+    if name in customers:
         has_record = True
         is_member = customers[name]
     else:
@@ -150,18 +157,41 @@ def get_customer_details():
     return {"name": name, "has_record": has_record, "is_member": is_member}
 
 
+# Update membership
+def update_membership(name):
+    while True:
+        become_member_input = (
+            input("Enter 'y' to become a member and 'n' to skip: ").strip().lower()
+        )
+
+        if become_member_input == "y":
+            customers[name] = True
+            print(f"\nSuccessfully made {name} a member.")
+            break
+        elif become_member_input == "n":
+            break
+        else:
+            print("\nInvalid option. Enter a valid option")
+
+
+# Add customer to the list
+def add_customer(name):
+    # Membership is False by default
+    customers[name] = False
+
+
 # Return a valid service request details including hours, parts, and costs
 def get_service_details():
     # Loop until a vaild service is requested
     while True:
         service = input("Enter service: ").strip().lower()
 
-        if services.get(service):
+        if is_service_available(service):
             service_info = services[service]
 
             # Get service hours
-            if service_info["service_hours"]:
-                service_hours = service_info["service_hours"]
+            if service_info["hours"] is not None:
+                service_hours = service_info["hours"]
             else:
                 service_hours = get_service_hours()
 
@@ -176,30 +206,16 @@ def get_service_details():
                 "service_hours": service_hours,
                 "service_parts": service_parts,
             }
-        else:
-            # If the service requested string is not offered by the shop or empty print an error message and loop back
-            print("\nInvalid service! Enter a service available.")
-            continue
 
 
 # Get service hours
 def get_service_hours():
     # Get valid service hours
     while True:
-        service_hours = input("Enter hours: ").strip()
+        hours = input("Enter hours: ").strip()
 
-        try:
-            service_hours = float(service_hours)
-        except ValueError:
-            # If the hours string is non-numeric or empty print an error message and loop back
-            print("\nInvalid hours! Enter numeric characters only.")
-            continue
-
-        if (service_hours > 0) and (service_hours % 0.5 == 0):
-            return service_hours
-        else:
-            print("\nInvalid hours! Enter a positive number in increments of 0.5.")
-            continue
+        if is_hours_valid(hours):
+            return float(hours)
 
 
 # Get service parts
@@ -212,22 +228,14 @@ def get_service_parts():
         else:
             part = input("Enter part: ").strip().lower()
 
-        # If part input is non-empty then lookup for the part
-        if part:
-            if parts.get(part):
-                service_parts.append((part, parts[part]))
-                continue
-            else:
-                print("\nInvalid part! Enter a part available.")
-                continue
+        if is_part_available(part):
+            service_parts.append((part, parts[part]))
+        elif not part and service_parts:
+            # Finish entering parts
+            return service_parts
         else:
-            if service_parts:
-                # Finish entering parts
-                return service_parts
-            else:
-                # If no part is entered yet print an error message and loop back
-                print("\nInvalid part! Enter at least one part.")
-                continue
+            # If no part is entered yet print an error message and loop back
+            print("\nInvalid input. Enter at least one part.")
 
 
 # Function that returns service hours, list of parts used and their prices, original cost, discount amount, and total cost
@@ -279,79 +287,156 @@ def display_receipt(service, costs):
     print(DIVIDER_CHAR * receipt_width)
 
     # Print service charge
-    print_receipt_line(
-        f"{service['service'].capitalize()}:",
-        f"{service['service_hours']} x {costs['hourly_service_rate']:.2f}",
-        column_width,
+    print(
+        f"{service['service'].capitalize():<{column_width}}{f'{service['service_hours']} x {costs['hourly_service_rate']:.2f}':>{column_width}}"
     )
 
     # Print part charge
     for part, price in service["service_parts"]:
-        print_receipt_line(
-            f"{part.capitalize()}:",
-            f"{price:.2f}",
-            column_width,
-        )
+        print(f"{part.capitalize():<{column_width}}{f'{price:.2f}':>{column_width}}")
 
     # Add section break
     print(DIVIDER_CHAR * receipt_width)
 
     # Print original cost, discount amount, and total cost
-    print_receipt_line(
-        f"{'Original Cost:'}",
-        f"{costs['original_cost']:.2f} AUD",
-        column_width,
+    print(
+        f"{'Original Cost:':<{column_width}}{f'{costs['original_cost']:.2f} AUD':>{column_width}}"
     )
 
-    print_receipt_line(
-        f"{'Discount:'}",
-        f"{costs['discount']:.2f} AUD",
-        column_width,
+    print(
+        f"{'Discount:':<{column_width}}{f'{costs['discount']:.2f} AUD':>{column_width}}"
     )
 
-    print_receipt_line(
-        f"{'Total Cost:'}",
-        f"{costs['total_cost']:.2f} AUD",
-        column_width,
+    print(
+        f"{'Total Cost:':<{column_width}}{f'{costs['total_cost']:.2f} AUD':>{column_width}}"
     )
 
     # End printing receipt with section break
     print(DIVIDER_CHAR * receipt_width)
 
 
-# Print receipt line
-def print_receipt_line(left_column, right_column, column_width):
-    print(f"{left_column:<{column_width}}{right_column:>{column_width}}")
-
-
 # Update service's hours preset
-def update_service_preset():
-    print("TODO")
+def update_services():
+    # Loop until valid update is requested
+    while True:
+        service_update_input = (
+            input(
+                "Enter service and hours (service, hours; enter 'na' for input hours): "
+            )
+            .strip()
+            .lower()
+        )
+
+        # Get service and hours separately form the input
+        service_update_input = list(
+            word.strip() for word in service_update_input.split(",")
+        )
+
+        # Verify if the list has only two words else print an error message and loop back
+        if len(service_update_input) == 2:
+            # Get service and hours
+            service = service_update_input[0]
+            hours = service_update_input[1]
+
+            # Check if service is valid else print an error message and loop back
+            if is_service_available(service):
+                if hours == "na":
+                    services[service]["hours"] = None
+                elif is_hours_valid(hours):
+                    # Update the existing service hours value
+                    services[service]["hours"] = float(hours)
+
+                print(
+                    f"\nUpdated service {service.capitalize()}. Hours changed to {services[service]['hours'] if services[service]['hours'] else 'User-input'}."
+                )
+                break
+        else:
+            print("\nInvalid input. Enter values in 'service, hours' format only.")
 
 
 # Update parts in the catalog
-def update_parts_catalog():
-    print("TODO")
+def update_parts():
+    # Loop until valid inputs are entered
+    while True:
+        part_update_input = input("Enter 'a' to add or 'r' to remove: ").strip().lower()
+
+        if part_update_input == "a":
+            add_parts()
+        elif part_update_input == "r":
+            remove_part()
+        else:
+            print("\nInvalid option. Enter a valid option.")
+
+
+# Add or modify part
+def add_parts():
+    # Loop for valid part and price input
+    while True:
+        add_parts_input = (
+            input(
+                "Enter parts and prices ('part_1, price_1, part_2, price_2, ...'; enter an existing part to update price): "
+            )
+            .strip()
+            .lower()
+        )
+
+        # Get part and prices separately
+        add_parts_input = list(word.strip() for word in add_parts_input.split(","))
+
+        num_of_words = len(add_parts_input)
+
+        # Check if the list has valid number of word pairs else print an error message and loop back
+        add_parts = {}
+        if num_of_words and num_of_words % 2 == 0:
+            for i in range(0, num_of_words, 2):
+                add_parts[add_parts_input[i]] = add_parts_input[i + 1]
+
+            if is_new_parts_valid(add_parts):
+                print()
+                # Add or update parts
+                for part, price in add_parts.items():
+                    price = float(price)
+                    is_existing_part = part in parts
+                    parts[part] = price
+                    print(
+                        f"{'Updated part' if is_existing_part else 'Added part'} {part.capitalize()}. Part price set to {price:.2f} AUD."
+                    )
+                break
+            else:
+                print(
+                    "\nInvalid input. Enter values in 'part_1, price_1, part_2, price_2, ...' format only."
+                )
+
+
+# Remove part
+def remove_part():
+    # Loop until valid part is entered
+    while True:
+        part = input("Enter part: ").strip().lower()
+
+        if is_part_available(part):
+            parts.pop(part)
+            print(f"\nRemoved part {part.capitalize()}.")
 
 
 # Display all the existing customers data
 def display_existing_customers():
     columns = [("No.", 5), ("Customer name", 15), ("Member", 8)]
-    total_col_width = 28
+    total_width = 28
 
-    print_data_header(columns, total_col_width)
+    print_data_header(columns, total_width)
 
     # Print each customer
-    for index, (name, is_member) in enumerate(customers.items(), start=1):
+    for i, (name, is_member) in enumerate(customers.items(), start=1):
         # Convert membership flags True or Flase to Yes or No respectively
         member = "Yes" if is_member else "No"
 
-        row = f"{index:<{columns[0][1]}}{name.capitalize():<{columns[1][1]}}{member:<{columns[2][1]}}"
+        row = f"{i:<{columns[0][1]}}{name.capitalize():<{columns[1][1]}}{member:<{columns[2][1]}}"
 
         print(row)
 
     # Add section break
-    print(DIVIDER_CHAR * total_col_width)
+    print(DIVIDER_CHAR * total_width)
 
 
 # Display all the services offered at the shop
@@ -362,53 +447,53 @@ def display_existing_services():
         ("Hours input required", 22),
         ("Parts input required", 22),
     ]
-    total_col_width = 70
+    total_width = 70
 
-    print_data_header(columns, total_col_width)
+    print_data_header(columns, total_width)
 
     # Print each service available in the shop
     for service, service_info in services.items():
-        service_hours = service_info["service_hours"]
+        hours = service_info["hours"]
         is_part_required = service_info["is_part_required"]
 
-        if service_hours:
-            service_hours = str(service_hours) + " hour(s)"
-            hours_input_reuired = "No"
+        if hours is not None:
+            hours = str(hours) + " hour(s)"
+            is_hours_required = "No"
         else:
-            service_hours = "User-input"
-            hours_input_reuired = "Yes"
+            hours = "User-input"
+            is_hours_required = "Yes"
 
-        parts_input_required = "Yes" if is_part_required else "No"
+        is_part_required = "Yes" if is_part_required else "No"
 
-        row = f"{service.capitalize():<{columns[0][1]}}{service_hours:<{columns[1][1]}}{hours_input_reuired:<{columns[2][1]}}{parts_input_required:<{columns[3][1]}}"
+        row = f"{service.capitalize():<{columns[0][1]}}{hours:<{columns[1][1]}}{is_hours_required:<{columns[2][1]}}{is_part_required:<{columns[3][1]}}"
 
         print(row)
 
     # Add section break
-    print(DIVIDER_CHAR * total_col_width)
+    print(DIVIDER_CHAR * total_width)
 
 
 # Display all the parts in the catalog
 def display_existing_parts():
     columns = [("Part", 10), ("Price (AUD)", 13)]
-    total_col_width = 23
+    total_width = 23
 
-    print_data_header(columns, total_col_width)
+    print_data_header(columns, total_width)
 
     # Print each part
     for part, price in parts.items():
         # Add part name column data
-        row = f"{part.capitalize():<{columns[0][1]}}{f'{price:.2f}':<{columns[0][1]}}"
+        row = f"{part.capitalize():<{columns[0][1]}}{f'{price:.2f}':<{columns[1][1]}}"
 
         print(row)
 
     # Add section break
-    print(DIVIDER_CHAR * total_col_width)
+    print(DIVIDER_CHAR * total_width)
 
 
 # Print data headers
-def print_data_header(columns, total_col_width):
-    print(DIVIDER_CHAR * total_col_width)
+def print_data_header(columns, total_width):
+    print(DIVIDER_CHAR * total_width)
 
     # Print header
     header = ""
@@ -417,7 +502,64 @@ def print_data_header(columns, total_col_width):
     print(header)
 
     # Add section break
-    print(DIVIDER_CHAR * total_col_width)
+    print(DIVIDER_CHAR * total_width)
+
+
+# Service name validation
+def is_service_available(service):
+    # Loop until a vaild service is requested
+    if service in services:
+        return True
+    else:
+        # If the service requested string is not offered by the shop or empty print an error message and loop back
+        print("\nInvalid service. Enter a service available.")
+        return False
+
+
+# Service hour validation
+def is_hours_valid(hours):
+    try:
+        hours = float(hours)
+
+        if hours > 0 and hours % 0.5 == 0:
+            return True
+    except ValueError:
+        # If the hours string is non-numeric or empty print an error message and loop back
+        print("\nInvalid hours. Enter numeric characters only.")
+    else:
+        print("\nInvalid hours. Enter a positive number in increments of 0.5.")
+
+    return False
+
+
+# Service part validation
+def is_part_available(part):
+    # Lookup for the part
+    if part in parts:
+        return True
+    else:
+        print("\nInvalid part. Enter a part available.")
+        return False
+
+
+# Validate new parts
+def is_new_parts_valid(new_parts):
+    for part, price in new_parts.items():
+        try:
+            price = float(price)
+        except ValueError:
+            print(
+                "\nInvalid part. Enter numeric characters only for the new part's price."
+            )
+            return False
+        else:
+            if not part.isalpha():
+                print(
+                    "\nInvalid part. Enter alphabetic characters only for the new part."
+                )
+                return False
+
+    return True
 
 
 # Start the program
